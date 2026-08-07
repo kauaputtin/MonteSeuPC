@@ -1,6 +1,7 @@
 import { CircuitBreaker } from "@/integrations/core/circuit-breaker";
 import type { ProductProvider } from "@/integrations/core/provider";
 import { TokenBucketRateLimiter } from "@/integrations/core/rate-limiter";
+import { HttpStatusError } from "@/integrations/core/retry";
 import { safeFetchJson } from "@/integrations/core/safe-fetch";
 import { externalOfferSchema, externalProductSchema } from "@/integrations/schemas/external";
 import type { ExternalOffer, ExternalProduct, GetOffersInput, GetProductInput, ProviderCapabilities, ProviderHealth, SearchProductsInput } from "@/integrations/types/external";
@@ -37,6 +38,19 @@ function numericIdentifier(value?: string) {
   return normalized.length >= 8 && normalized.length <= 14 ? normalized : undefined;
 }
 
+function catalogDomain(query: string) {
+  const value = query.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/placa mae|motherboard/.test(value)) return "MLB-COMPUTER_MOTHERBOARDS";
+  if (/placa de video|graphics|\bgpu\b|geforce|radeon/.test(value)) return "MLB-GRAPHICS_CARDS";
+  if (/memoria|\bram\b|ddr[45]?/.test(value)) return "MLB-RAM_MEMORY_MODULES";
+  if (/\bssd\b|nvme|hard drive|\bhdd\b|armazenamento/.test(value)) return "MLB-HARD_DRIVES_AND_SSDS";
+  if (/fonte|power suppl|\bpsu\b/.test(value)) return "MLB-DESKTOP_COMPUTER_POWER_SUPPLIES";
+  if (/gabinete|computer case/.test(value)) return "MLB-DESKTOP_COMPUTER_CASES";
+  if (/cooler|water cooler|air cooler/.test(value)) return "MLB-DESKTOP_COMPUTER_COOLERS_AND_FANS";
+  if (/processador|\bcpu\b|ryzen|intel core/.test(value)) return "MLB-COMPUTER_PROCESSORS";
+  return undefined;
+}
+
 export class MercadoLivreProvider implements ProductProvider {
   readonly id = "mercado-livre";
   readonly name = "Mercado Livre";
@@ -64,7 +78,9 @@ export class MercadoLivreProvider implements ProductProvider {
   async searchProducts(input: SearchProductsInput): Promise<ExternalProduct[]> {
     const limit = Math.max(1, Math.min(input.limit ?? 10, 20));
     const offset = Math.max(0, input.offset ?? 0);
-    const raw = await this.request(`/products/search?status=active&site_id=MLB&q=${encodeURIComponent(input.query)}&limit=${limit}&offset=${offset}`);
+    const domain = catalogDomain(input.query);
+    const domainFilter = domain ? `&domain_id=${encodeURIComponent(domain)}` : "";
+    const raw = await this.request(`/products/search?status=active&site_id=MLB&q=${encodeURIComponent(input.query)}${domainFilter}&limit=${limit}&offset=${offset}`);
     const search = catalogSearchSchema.parse(raw);
     const products: ExternalProduct[] = [];
     for (const candidate of search.results) {
@@ -88,7 +104,12 @@ export class MercadoLivreProvider implements ProductProvider {
 
   async getOffers(input: GetOffersInput): Promise<ExternalOffer[]> {
     const limit = Math.max(1, Math.min(input.limit ?? 100, 100));
-    const raw = await this.request(`/products/${encodeURIComponent(input.externalProductId)}/items?limit=${limit}`);
+    let raw: unknown;
+    try { raw = await this.request(`/products/${encodeURIComponent(input.externalProductId)}/items?limit=${limit}`); }
+    catch (error) {
+      if (error instanceof HttpStatusError && error.status === 404) return [];
+      throw error;
+    }
     const listing = catalogOffersSchema.parse(raw);
     const itemIds = listing.results.map((item) => item.item_id).slice(0, limit);
     const offers: ExternalOffer[] = [];
