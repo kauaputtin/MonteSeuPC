@@ -6,6 +6,7 @@ import type {
   Offer,
   Store
 } from "@/types/domain";
+import { availableOffersForComponent, getEffectiveOfferPrice } from "@/lib/offers";
 
 export const categories: Category[] = [
   { id: "cat-cpu", name: "Processador", slug: "processador", sortOrder: 1, description: "Define o desempenho geral e a plataforma do computador." },
@@ -127,11 +128,9 @@ export const demoBuilds = [
 ];
 
 export function getOffersForComponent(componentId: string) {
-  return offers
-    .filter((offer) => offer.componentId === componentId && offer.available)
-    .sort((a, b) => (a.pixPrice ?? a.price) - (b.pixPrice ?? b.price));
+  return availableOffersForComponent(offers, componentId);
 }
 
 export function getEffectivePrice(offer: Offer) {
-  return offer.pixPrice ?? offer.price;
+  return getEffectiveOfferPrice(offer);
 }

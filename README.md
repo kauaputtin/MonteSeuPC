@@ -1,6 +1,6 @@
 # Monte Seu PC
 
-MVP full-stack para montar um computador em etapas, verificar compatibilidade, comparar ofertas cadastradas manualmente e compartilhar a configuração. Toda a interface está em português do Brasil e o catálogo incluído é explicitamente fictício.
+Aplicação full-stack para montar um computador em etapas, verificar compatibilidade, importar catálogo autorizado, comparar ofertas e compartilhar a configuração. Sem Supabase ou fontes configuradas, o catálogo fictício continua disponível e é identificado como demonstração.
 
 ## O que está pronto
 
@@ -15,6 +15,11 @@ MVP full-stack para montar um computador em etapas, verificar compatibilidade, c
 - Compartilhamento permanente pelo Supabase; sem variáveis configuradas, um link portátil codificado mantém o MVP funcional.
 - Painel administrativo com Supabase Auth, RLS, busca, filtros, paginação, formulários React Hook Form, validação, edição e desativação confirmada.
 - Migrations, seed SQL, schemas Zod, índices, constraints, triggers e testes Vitest.
+- Arquitetura modular de providers, normalização por categoria, matching conservador, histórico de preço e catálogo Supabase no frontend.
+- Mercado Livre via API oficial e OAuth no servidor, além de importador CSV autorizado e painel em `/admin/integracoes`.
+- Jobs manuais/agendados com lock, rate limit, retry/backoff, circuit breaker, timeout, cache controlado, auditoria e proteção SSRF.
+
+O estado real de cada fonte, as credenciais e o procedimento operacional estão em [docs/integrations.md](docs/integrations.md).
 
 ## Requisitos
 
@@ -50,7 +55,7 @@ SUPABASE_SERVICE_ROLE_KEY=SUA_SERVICE_ROLE
 NEXT_PUBLIC_SITE_URL=https://seu-dominio.com.br
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` é lida apenas na rota de servidor que cria montagens compartilhadas. Nunca use o prefixo `NEXT_PUBLIC_` nela e nunca a exponha no navegador. Sem essa chave, o compartilhamento recorre ao link portátil de demonstração.
+`SUPABASE_SERVICE_ROLE_KEY` é lida apenas em módulos e rotas de servidor para montagens, integrações e jobs. Nunca use o prefixo `NEXT_PUBLIC_` nela e nunca a exponha no navegador. Sem essa chave, o compartilhamento recorre ao link portátil de demonstração e as integrações ficam indisponíveis.
 
 ## Configurar o Supabase
 
@@ -58,17 +63,18 @@ NEXT_PUBLIC_SITE_URL=https://seu-dominio.com.br
 
 1. Crie um projeto no Supabase.
 2. Abra o SQL Editor e execute `supabase/migrations/202608070001_initial_schema.sql`.
-3. Execute `supabase/seed.sql`.
-4. Copie a URL, a chave pública e a service role para `.env.local`.
-5. Em Authentication, crie o usuário administrador.
-6. No SQL Editor, associe o usuário ao perfil administrativo:
+3. Execute `supabase/migrations/202608070002_integrations.sql`.
+4. Execute `supabase/seed.sql` somente se quiser o fallback demonstrativo.
+5. Copie a URL, a chave pública e a service role para `.env.local`.
+6. Em Authentication, crie o usuário administrador.
+7. No SQL Editor, associe o usuário ao perfil administrativo:
 
 ```sql
 insert into public.admin_profiles (user_id, role)
 values ('UUID-DO-USUARIO', 'admin');
 ```
 
-7. Reinicie `npm run dev` e entre por `/admin/login`.
+8. Reinicie `npm run dev` e entre por `/admin/login`.
 
 ### Supabase local com CLI
 
@@ -143,7 +149,7 @@ npx vercel --prod
 
 ## Limitações do MVP e próximos passos
 
-- O catálogo do frontend usa o fallback local para garantir funcionamento imediato; a estrutura de repositório e banco está pronta para substituir a leitura pelo Supabase em produção.
+- O catálogo do frontend lê o Supabase quando existem componentes reais e usa o fallback local explicitamente marcado quando não existem.
 - Não existe scraping, cálculo real de frete nem promessa de preço atual.
 - Não há conta de consumidor; a montagem privada fica apenas no navegador.
 - Links portáteis de demonstração não têm persistência no servidor. Com Supabase e service role, o identificador é aleatório e persistente.

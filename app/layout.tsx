@@ -7,7 +7,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: { default: "Monte Seu PC — Compatibilidade e preços", template: "%s | Monte Seu PC" },
-  description: "Monte um computador passo a passo, valide a compatibilidade das peças e compare ofertas demonstrativas.",
+  description: "Monte um computador passo a passo, valide a compatibilidade das peças e compare ofertas importadas de fontes autorizadas.",
   openGraph: { title: "Monte Seu PC sem medo de errar", description: "Escolha peças compatíveis e compare ofertas em um só lugar.", type: "website", locale: "pt_BR" },
   robots: { index: true, follow: true }
 };

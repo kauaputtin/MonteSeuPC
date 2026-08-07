@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BuilderWizard } from "@/features/builder/builder-wizard";
+import { getCatalogData } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Montar meu PC",
@@ -7,6 +8,6 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true }
 };
 
-export default function BuilderPage() {
-  return <BuilderWizard />;
+export default async function BuilderPage() {
+  return <BuilderWizard catalog={await getCatalogData()} />;
 }

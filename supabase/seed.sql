@@ -46,6 +46,8 @@ insert into public.components (id,category_id,brand,name,slug,description,image_
 on conflict (id) do nothing;
 
 -- Duas ofertas demonstrativas por componente, criadas sem scraping.
+update public.components set is_demo = true where brand ilike '% Demo';
+
 insert into public.offers (id, component_id, store_id, price, pix_price, installment_price, installments, shipping_price, product_url, affiliate, available, last_checked_at)
 select 'offer-' || c.id || '-' || s.suffix, c.id, s.store_id,
   (case c.category_id when 'cat-cpu' then 1099 when 'cat-mb' then 899 when 'cat-ram' then 399 when 'cat-gpu' then 1899 when 'cat-storage' then 349 when 'cat-psu' then 449 when 'cat-case' then 359 else 189 end) + s.extra,

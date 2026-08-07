@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Boxes, Building2, Gauge, Tags } from "lucide-react";
+import { Boxes, Building2, Gauge, PlugZap, Tags } from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Visão geral", icon: Gauge },
+  { href: "/admin/integracoes", label: "Integrações", icon: PlugZap },
   { href: "/admin/componentes", label: "Componentes", icon: Boxes },
   { href: "/admin/lojas", label: "Lojas", icon: Building2 },
   { href: "/admin/ofertas", label: "Ofertas", icon: Tags }

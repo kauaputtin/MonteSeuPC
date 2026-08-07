@@ -1,0 +1,42 @@
+[
+  {
+    "providerId": "mock",
+    "externalId": "MLB-DEMO-5600G",
+    "externalSku": "FIXTURE-5600G",
+    "gtin": "730143313414",
+    "ean": "730143313414",
+    "mpn": "100-100000252BOX",
+    "brand": "AMD",
+    "title": "Fixture - Processador AMD Ryzen 5 5600G AM4",
+    "model": "Ryzen 5 5600G",
+    "category": "MLB-COMPUTER_PROCESSORS",
+    "description": "Fixture local, não representa anúncio ou preço real.",
+    "imageUrl": "https://fixtures.example/5600g.jpg",
+    "productUrl": "https://fixtures.example/5600g",
+    "specifications": {
+      "Marca": "AMD",
+      "Modelo": "Ryzen 5 5600G",
+      "Socket": "Socket AM 4",
+      "Quantidade de núcleos": "6",
+      "Quantidade de threads": "12",
+      "TDP": "65 W",
+      "Gráficos integrados": "Sim"
+    },
+    "offers": [
+      {
+        "providerId": "mock",
+        "externalId": "FIXTURE-OFFER-5600G",
+        "sellerExternalId": "fixture-seller",
+        "sellerName": "Loja fixture",
+        "price": 999.9,
+        "pixPrice": 949.9,
+        "currency": "BRL",
+        "available": true,
+        "condition": "new",
+        "productUrl": "https://fixtures.example/5600g",
+        "fetchedAt": "2026-08-07T12:00:00.000Z"
+      }
+    ],
+    "fetchedAt": "2026-08-07T12:00:00.000Z"
+  }
+]

@@ -45,6 +45,16 @@ export function calculateRecommendedPsuWatts(selected: SelectedComponents) {
 
 export function evaluateBuild(selected: SelectedComponents): CompatibilityResult[] {
   const checks: CompatibilityResult[] = [];
+  for (const component of Object.values(selected)) {
+    if (component?.specificationStatus && component.specificationStatus !== "verified") {
+      checks.push(result(
+        "warning",
+        `unverified-specifications-${component.id}`,
+        `Compatibilidade não verificada para ${component.name}: há especificações técnicas ausentes ou ainda não confirmadas.`,
+        [component.id]
+      ));
+    }
+  }
   const cpu = selected.processador;
   const motherboard = selected["placa-mae"];
   const memory = selected["memoria-ram"];

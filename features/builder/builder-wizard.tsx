@@ -4,13 +4,13 @@ import { ArrowLeft, ArrowRight, Check, ChevronRight, Search, SlidersHorizontal, 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { categories, components } from "@/data/mock-data";
+import { CatalogProvider, useCatalog } from "@/features/catalog/catalog-context";
 import { BuildProvider, useBuild, useDebouncedValue } from "@/features/builder/build-context";
 import { BuildSummary } from "@/features/builder/build-summary";
 import { ProductCard } from "@/features/builder/product-card";
 import { evaluateCandidate } from "@/lib/compatibility/compatibility-engine";
 import { formatCurrency } from "@/lib/utils";
-import type { Component } from "@/types/domain";
+import type { CatalogData, Component } from "@/types/domain";
 
 function getFilterValue(item: Component) {
   const specs = item.specifications;
@@ -27,6 +27,7 @@ function getFilterValue(item: Component) {
 }
 
 function WizardContent() {
+  const { categories, components, source } = useCatalog();
   const build = useBuild();
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("all");
@@ -35,7 +36,7 @@ function WizardContent() {
   const debouncedQuery = useDebouncedValue(query);
   const category = categories[build.currentStep];
   const isSummary = build.currentStep === categories.length;
-  const categoryProducts = useMemo(() => category ? components.filter((item) => item.categorySlug === category.slug && item.active) : [], [category]);
+  const categoryProducts = useMemo(() => category ? components.filter((item) => item.categorySlug === category.slug && item.active) : [], [category, components]);
   const brands = [...new Set(categoryProducts.map((item) => item.brand))];
   const filters = [...new Set(categoryProducts.map(getFilterValue))];
 
@@ -54,7 +55,8 @@ function WizardContent() {
 
   return (
     <div className="container-shell py-8 sm:py-10">
-      <div className="mb-7">
+        <div className="mb-7">
+        {source === "demo" && <p className="mb-4 rounded-md border border-amber-400/20 bg-amber-400/5 p-3 text-xs text-amber-100">Catálogo demonstrativo: configure o Supabase e uma fonte autorizada para exibir produtos e preços reais.</p>}
         <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate-400"><span>Progresso da montagem</span><span>{Math.round(((build.currentStep + 1) / 9) * 100)}%</span></div>
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-label="Progresso da montagem" aria-valuemin={1} aria-valuemax={9} aria-valuenow={build.currentStep + 1}><div className="h-full rounded-full bg-cyan-300 transition-all" style={{ width: `${((build.currentStep + 1) / 9) * 100}%` }} /></div>
       </div>
@@ -94,7 +96,7 @@ function WizardContent() {
         </main>
 
         <aside className="surface sticky top-24 hidden rounded-lg p-4 xl:block">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Sua montagem</p><p className="mt-2 text-2xl font-black">{formatCurrency(build.total)}</p><p className="mt-1 text-xs text-slate-500">Menores ofertas ou lojas escolhidas</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Sua montagem</p><p className="mt-2 text-2xl font-black">{formatCurrency(build.total)}</p><p className="mt-1 text-xs text-slate-500">Lojas escolhidas ou menor preço {build.paymentPreference === "pix" ? "no Pix" : "normal"}</p>
           <div className="my-4 border-t border-slate-800" />
           <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2 text-slate-400"><Zap size={16} className="text-cyan-300" /> Consumo</span><strong>{build.estimatedWatts} W</strong></div><div className="mt-3 flex items-center justify-between text-sm"><span className="text-slate-400">Fonte indicada</span><strong>{build.recommendedPsuWatts} W</strong></div>
           <Button className="mt-5 w-full" size="sm" variant="secondary" onClick={() => build.setStep(8)}>Ver resumo</Button>
@@ -104,6 +106,6 @@ function WizardContent() {
   );
 }
 
-export function BuilderWizard() {
-  return <BuildProvider><WizardContent /></BuildProvider>;
+export function BuilderWizard({ catalog }: { catalog: CatalogData }) {
+  return <CatalogProvider catalog={catalog}><BuildProvider><WizardContent /></BuildProvider></CatalogProvider>;
 }

@@ -133,6 +133,12 @@ export interface Component {
   specifications: ComponentSpecifications;
   estimatedWatts: number;
   active: boolean;
+  gtin?: string;
+  ean?: string;
+  mpn?: string;
+  model?: string;
+  specificationStatus?: "verified" | "partial" | "unverified";
+  specificationSources?: string[];
 }
 
 export interface Store {
@@ -157,6 +163,26 @@ export interface Offer {
   affiliate: boolean;
   available: boolean;
   lastCheckedAt: string;
+  originalPrice?: number;
+  originalUrl?: string;
+  affiliateUrl?: string;
+  affiliateProgram?: string;
+  affiliateCampaignId?: string;
+  affiliateStatus?: "active" | "inactive" | "pending";
+  sellerExternalId?: string;
+  sellerName?: string;
+  condition?: "new" | "used" | "refurbished" | "open_box" | "unknown";
+  stockQuantity?: number;
+  staleAt?: string;
+  sourceProviderId?: string;
+}
+
+export interface CatalogData {
+  categories: Category[];
+  components: Component[];
+  stores: Store[];
+  offers: Offer[];
+  source: "supabase" | "demo";
 }
 
 export interface CompatibilityResult {

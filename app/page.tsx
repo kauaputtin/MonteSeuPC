@@ -9,7 +9,7 @@ import { formatCurrency } from "@/lib/utils";
 
 const benefits = [
   { icon: ShieldCheck, title: "Compatibilidade verificada", text: "O montador cruza socket, memória, dimensões, energia e conectores a cada escolha." },
-  { icon: GitCompareArrows, title: "Comparação de preços", text: "Compare ofertas demonstrativas e selecione a loja para cada componente." },
+  { icon: GitCompareArrows, title: "Comparação de preços", text: "Compare ofertas importadas de fontes autorizadas e selecione a loja para cada componente." },
   { icon: ShoppingCart, title: "Links diretos para compra", text: "Finalize sua lista e abra as páginas das lojas com segurança em uma nova aba." }
 ];
 
@@ -121,7 +121,7 @@ export default function HomePage() {
       </section>
 
       <section className="container-shell pb-8">
-        <div className="flex gap-3 rounded-md border border-amber-400/20 bg-amber-400/5 p-4 text-sm leading-6 text-amber-100/80"><ExternalLink className="mt-0.5 shrink-0 text-amber-300" size={18} /><p>Preços, disponibilidade e condições deste catálogo são apenas demonstrações. Em uma operação real, confirme os valores diretamente no site da loja antes de comprar.</p></div>
+        <div className="flex gap-3 rounded-md border border-amber-400/20 bg-amber-400/5 p-4 text-sm leading-6 text-amber-100/80"><ExternalLink className="mt-0.5 shrink-0 text-amber-300" size={18} /><p>As configurações de exemplo acima são fictícias. No catálogo conectado, preços e disponibilidade também podem mudar; confirme os valores diretamente no site da loja antes de comprar.</p></div>
       </section>
     </>
   );
