@@ -8,7 +8,11 @@ export async function GET() {
   if (!await verifyAdminRequest()) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   const clientId = process.env.MERCADO_LIVRE_CLIENT_ID?.trim();
   const redirectUri = process.env.MERCADO_LIVRE_REDIRECT_URI?.trim();
-  if (!clientId || !redirectUri) return NextResponse.json({ error: "Configure o client ID e a redirect URI do Mercado Livre." }, { status: 503 });
+  const missingVariables = [
+    !clientId ? "MERCADO_LIVRE_CLIENT_ID" : null,
+    !redirectUri ? "MERCADO_LIVRE_REDIRECT_URI" : null
+  ].filter((name): name is string => Boolean(name));
+  if (!clientId || !redirectUri) return NextResponse.json({ error: `Variáveis ausentes neste deployment: ${missingVariables.join(", ")}.` }, { status: 503 });
   let callback: URL;
   try { callback = new URL(redirectUri); }
   catch { return NextResponse.json({ error: "MERCADO_LIVRE_REDIRECT_URI não é uma URL válida." }, { status: 503 }); }
