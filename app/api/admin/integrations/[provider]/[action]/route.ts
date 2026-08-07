@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     }
     if (action === "sync") {
       const body = bodySchema.parse(await request.json().catch(() => ({})));
-      const defaultQueries = (process.env.MERCADO_LIVRE_SYNC_QUERIES ?? "processador,placa mãe,memória DDR5,placa de vídeo,SSD NVMe,fonte ATX,gabinete PC,cooler CPU").split(",").map((item) => item.trim()).filter(Boolean);
+      const defaultQueries = (process.env.MERCADO_LIVRE_SYNC_QUERIES ?? "Ryzen 5 5600G,placa mãe B550M,memória DDR4 16GB,RX 6600,SSD NVMe 1TB,fonte 650W,gabinete ATX,cooler AM4").split(",").map((item) => item.trim()).filter(Boolean);
       const result = await new SyncService(new SupabaseSyncRepository(context.supabase)).syncProvider(provider, { queries: body.queries ?? defaultQueries, pages: body.pages, pageSize: body.pageSize });
       await auditAdminAction(context, "integration.sync", "integration_provider", providerId, { jobId: result.jobId, status: result.status });
       return NextResponse.json(result);

@@ -14,10 +14,12 @@ function values(specs: ComponentSpecifications): [string, string][] {
 }
 
 export function getKeySpecifications(component: Component, limit = 3) {
+  if (component.specificationStatus && component.specificationStatus !== "verified") return [["Ficha técnica", "Parcial · confirme no anúncio"]] as [string, string][];
   return values(component.specifications).slice(0, limit);
 }
 
 export function SpecificationList({ component }: { component: Component }) {
+  if (component.specificationStatus && component.specificationStatus !== "verified") return <div className="rounded-md border border-amber-400/20 bg-amber-400/5 p-4 text-sm leading-6 text-amber-100">A peça é real e possui oferta ativa, mas a ficha técnica ainda está parcial. Confirme as especificações no anúncio do Mercado Livre antes de usar as regras de compatibilidade.</div>;
   return (
     <dl className="grid gap-px overflow-hidden rounded-md border border-slate-800 bg-slate-800 sm:grid-cols-2">
       {values(component.specifications).map(([label, value]) => (

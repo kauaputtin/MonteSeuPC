@@ -71,7 +71,7 @@ function itemToExternal(item: MercadoLivreItem): ExternalOffer {
 function catalogDomain(query: string) {
   const value = query.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/placa mae|motherboard/.test(value)) return "MLB-COMPUTER_MOTHERBOARDS";
-  if (/placa de video|graphics|\bgpu\b|geforce|radeon/.test(value)) return "MLB-GRAPHICS_CARDS";
+  if (/placa de video|graphics|\bgpu\b|geforce|radeon|\brx\s?\d|\brtx\s?\d|\bgtx\s?\d/.test(value)) return "MLB-GRAPHICS_CARDS";
   if (/memoria|\bram\b|ddr[45]?/.test(value)) return "MLB-RAM_MEMORY_MODULES";
   if (/\bssd\b|nvme|hard drive|\bhdd\b|armazenamento/.test(value)) return "MLB-HARD_DRIVES_AND_SSDS";
   if (/fonte|power suppl|\bpsu\b/.test(value)) return "MLB-DESKTOP_COMPUTER_POWER_SUPPLIES";

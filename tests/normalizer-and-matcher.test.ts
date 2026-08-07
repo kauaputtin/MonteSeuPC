@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import fixture from "@/tests/fixtures/external-products.json";
 import { normalizeBrand, normalizeExternalProduct, normalizeMemoryType, normalizeModel, normalizeSocket, parseNumberWithUnit } from "@/integrations/core/normalizer";
+import { createPublishableSpecifications } from "@/integrations/core/publishable-specifications";
 import { canAutoMatch, rankProductMatches } from "@/integrations/core/product-matcher";
 import { externalProductsSchema } from "@/integrations/schemas/external";
 import { components } from "@/data/mock-data";
+import { specificationsSchema } from "@/lib/validations/schemas";
 import type { Component } from "@/types/domain";
 
 const product = externalProductsSchema.parse(fixture)[0];
@@ -29,6 +31,18 @@ describe("normalização externa", () => {
     expect(normalized.specifications.socket).toBe("AM4");
     expect(normalized.status).toBe("partial");
     expect(normalized.specifications.baseClockGhz).toBeNull();
+  });
+
+  it("mapeia os nomes de atributos usados pelo catálogo do Mercado Livre", () => {
+    const normalized = normalizeExternalProduct({ ...product, category: "MLB-COMPUTER_PROCESSORS", specifications: { compatible_sockets: "1200", cpu_cores_number: "6", cpu_threads_number: "12", min_clock_frequency: "2.6 GHz", max_clock_frequency: "4.4 GHz", tdp: "65 W" } });
+    expect(normalized.specifications).toMatchObject({ socket: "LGA1200", cores: 6, threads: 12, baseClockGhz: 2.6, turboClockGhz: 4.4, tdpWatts: 65 });
+  });
+
+  it("gera uma estrutura publicável sem declarar a ficha parcial como verificada", () => {
+    const normalized = normalizeExternalProduct({ ...product, category: "MLB-COMPUTER_PROCESSORS", specifications: { compatible_sockets: "AM4", cpu_cores_number: "6", cpu_threads_number: "12", tdp: "65 W" } });
+    const publishable = createPublishableSpecifications(normalized, product.title);
+    expect(specificationsSchema.safeParse(publishable).success).toBe(true);
+    expect(normalized.status).toBe("partial");
   });
 });
 

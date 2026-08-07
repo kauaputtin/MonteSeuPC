@@ -30,6 +30,10 @@ function psuSuppliesConnector(psu: PsuSpecs, required: string) {
   return available >= Number(requiredEightPins);
 }
 
+function hasVerifiedSpecifications(...components: Component[]) {
+  return components.every((component) => !component.specificationStatus || component.specificationStatus === "verified");
+}
+
 export function calculateRawWatts(selected: SelectedComponents) {
   return Object.values(selected).reduce((sum, item) => sum + (item?.estimatedWatts ?? 0), 0);
 }
@@ -64,7 +68,7 @@ export function evaluateBuild(selected: SelectedComponents): CompatibilityResult
   const pcCase = selected.gabinete;
   const cooler = selected.cooler;
 
-  if (cpu && motherboard) {
+  if (cpu && motherboard && hasVerifiedSpecifications(cpu, motherboard)) {
     const cpuSpecs = cpu.specifications as ProcessorSpecs;
     const mbSpecs = motherboard.specifications as MotherboardSpecs;
     checks.push(result(
@@ -78,7 +82,7 @@ export function evaluateBuild(selected: SelectedComponents): CompatibilityResult
     if (mbSpecs.biosWarning) checks.push(result("warning", "motherboard-bios", mbSpecs.biosWarning, [cpu.id, motherboard.id]));
   }
 
-  if (motherboard && memory && motherboard.specifications.kind === "motherboard" && memory.specifications.kind === "memory") {
+  if (motherboard && memory && hasVerifiedSpecifications(motherboard, memory) && motherboard.specifications.kind === "motherboard" && memory.specifications.kind === "memory") {
     const mb = motherboard.specifications;
     const ram = memory.specifications;
     checks.push(result(
@@ -98,21 +102,21 @@ export function evaluateBuild(selected: SelectedComponents): CompatibilityResult
     ));
   }
 
-  if (motherboard && pcCase && motherboard.specifications.kind === "motherboard" && pcCase.specifications.kind === "case") {
+  if (motherboard && pcCase && hasVerifiedSpecifications(motherboard, pcCase) && motherboard.specifications.kind === "motherboard" && pcCase.specifications.kind === "case") {
     const ok = pcCase.specifications.motherboardFormFactors.includes(motherboard.specifications.formFactor);
     checks.push(result(ok ? "compatible" : "incompatible", "motherboard-case-format",
       ok ? `Gabinete aceita placa-mãe ${motherboard.specifications.formFactor}.` : `O gabinete não aceita o formato ${motherboard.specifications.formFactor}.`,
       [motherboard.id, pcCase.id]));
   }
 
-  if (gpu && pcCase && gpu.specifications.kind === "gpu" && pcCase.specifications.kind === "case") {
+  if (gpu && pcCase && hasVerifiedSpecifications(gpu, pcCase) && gpu.specifications.kind === "gpu" && pcCase.specifications.kind === "case") {
     const ok = gpu.specifications.lengthMm <= pcCase.specifications.maxGpuLengthMm;
     checks.push(result(ok ? "compatible" : "incompatible", "gpu-length",
       ok ? `GPU dentro do limite de ${pcCase.specifications.maxGpuLengthMm} mm.` : `A GPU tem ${gpu.specifications.lengthMm} mm e o gabinete aceita até ${pcCase.specifications.maxGpuLengthMm} mm.`,
       [gpu.id, pcCase.id]));
   }
 
-  if (cooler && pcCase && cooler.specifications.kind === "cooler" && pcCase.specifications.kind === "case") {
+  if (cooler && pcCase && hasVerifiedSpecifications(cooler, pcCase) && cooler.specifications.kind === "cooler" && pcCase.specifications.kind === "case") {
     const coolerSpecs = cooler.specifications as CoolerSpecs;
     const caseSpecs = pcCase.specifications as CaseSpecs;
     if (coolerSpecs.coolerType === "Air cooler") {
@@ -128,7 +132,7 @@ export function evaluateBuild(selected: SelectedComponents): CompatibilityResult
     }
   }
 
-  if (cooler && cpu && cooler.specifications.kind === "cooler" && cpu.specifications.kind === "processor") {
+  if (cooler && cpu && hasVerifiedSpecifications(cooler, cpu) && cooler.specifications.kind === "cooler" && cpu.specifications.kind === "processor") {
     const ok = cooler.specifications.supportedSockets.includes(cpu.specifications.socket);
     checks.push(result(ok ? "compatible" : "incompatible", "cooler-socket",
       ok ? `Cooler compatível com ${cpu.specifications.socket}.` : `O cooler não inclui suporte ao socket ${cpu.specifications.socket}.`,
@@ -138,27 +142,27 @@ export function evaluateBuild(selected: SelectedComponents): CompatibilityResult
     }
   }
 
-  if (psu && pcCase && psu.specifications.kind === "psu" && pcCase.specifications.kind === "case") {
+  if (psu && pcCase && hasVerifiedSpecifications(psu, pcCase) && psu.specifications.kind === "psu" && pcCase.specifications.kind === "case") {
     const ok = pcCase.specifications.psuFormFactors.includes(psu.specifications.formFactor);
     checks.push(result(ok ? "compatible" : "incompatible", "psu-case-format",
       ok ? `Gabinete aceita fonte ${psu.specifications.formFactor}.` : `O gabinete não aceita fonte ${psu.specifications.formFactor}.`,
       [psu.id, pcCase.id]));
   }
 
-  if (storage && motherboard && storage.specifications.kind === "storage" && motherboard.specifications.kind === "motherboard") {
+  if (storage && motherboard && hasVerifiedSpecifications(storage, motherboard) && storage.specifications.kind === "storage" && motherboard.specifications.kind === "motherboard") {
     const ok = motherboard.specifications.storageInterfaces.includes(storage.specifications.interface);
     checks.push(result(ok ? "compatible" : "incompatible", "storage-interface",
       ok ? `Interface ${storage.specifications.interface} disponível.` : `A placa-mãe não oferece interface ${storage.specifications.interface}.`,
       [storage.id, motherboard.id]));
   }
 
-  if (psu && psu.specifications.kind === "psu") {
+  if (psu && hasVerifiedSpecifications(psu) && psu.specifications.kind === "psu") {
     const recommended = calculateRecommendedPsuWatts(selected);
     const psuSpecs = psu.specifications as PsuSpecs;
     checks.push(result(psuSpecs.wattage >= recommended ? "compatible" : "incompatible", "psu-wattage",
       psuSpecs.wattage >= recommended ? `Fonte atende à recomendação estimada de ${recommended} W.` : `A fonte tem ${psuSpecs.wattage} W; a estimativa recomenda ${recommended} W.`,
       [psu.id]));
-    if (gpu && gpu.specifications.kind === "gpu") {
+    if (gpu && hasVerifiedSpecifications(gpu) && gpu.specifications.kind === "gpu") {
       const gpuSpecs = gpu.specifications as GpuSpecs;
       const missing = gpuSpecs.powerConnectors.filter((required) => !psuSuppliesConnector(psuSpecs, required));
       checks.push(result(missing.length === 0 ? "compatible" : "incompatible", "gpu-power-connectors",
@@ -167,7 +171,7 @@ export function evaluateBuild(selected: SelectedComponents): CompatibilityResult
     }
   }
 
-  if (cpu && cpu.specifications.kind === "processor" && !cpu.specifications.integratedGraphics && !gpu) {
+  if (cpu && hasVerifiedSpecifications(cpu) && cpu.specifications.kind === "processor" && !cpu.specifications.integratedGraphics && !gpu) {
     checks.push(result("warning", "missing-video-output", "O processador não possui vídeo integrado. Adicione uma placa de vídeo para obter imagem.", [cpu.id]));
   }
 

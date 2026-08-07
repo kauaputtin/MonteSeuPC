@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (!supabase) return NextResponse.json({ error: "Supabase service role não configurada." }, { status: 503 });
   const { data, error } = await supabase.from("integration_providers").select("id").eq("enabled", true).in("integration_type", ["official_api", "affiliate_api", "authorized_feed"]).or(`next_sync_at.is.null,next_sync_at.lte.${new Date().toISOString()}`).limit(2);
   if (error) return NextResponse.json({ error: "Falha ao consultar a agenda." }, { status: 500 });
-  const queries = (process.env.MERCADO_LIVRE_SYNC_QUERIES ?? "processador,placa mãe,memória DDR5,placa de vídeo,SSD NVMe,fonte ATX,gabinete PC,cooler CPU").split(",").map((item) => item.trim()).filter(Boolean);
+  const queries = (process.env.MERCADO_LIVRE_SYNC_QUERIES ?? "Ryzen 5 5600G,placa mãe B550M,memória DDR4 16GB,RX 6600,SSD NVMe 1TB,fonte 650W,gabinete ATX,cooler AM4").split(",").map((item) => item.trim()).filter(Boolean);
   const results = [];
   for (const row of data ?? []) {
     const provider = getProviderRegistry().get(String(row.id));

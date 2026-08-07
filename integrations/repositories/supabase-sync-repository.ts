@@ -5,6 +5,7 @@ import type { SyncRepository } from "@/integrations/core/sync-service";
 import type { ExternalOffer, ExternalProduct, MatchCandidate, NormalizationResult, SyncMetrics } from "@/integrations/types/external";
 import { specificationsSchema } from "@/lib/validations/schemas";
 import { advanceOfferStaleness } from "@/integrations/core/staleness";
+import { createPublishableSpecifications } from "@/integrations/core/publishable-specifications";
 import { categorySlugs, type CategorySlug, type Component } from "@/types/domain";
 
 function slug(value: string) {
@@ -59,15 +60,16 @@ export class SupabaseSyncRepository implements SyncRepository {
     });
   }
 
-  async createVerifiedComponent(product: ExternalProduct, normalized: NormalizationResult) {
-    if (!normalized.categorySlug || normalized.status !== "verified") return null;
-    const parsed = specificationsSchema.safeParse(normalized.specifications);
-    if (!parsed.success) return null;
+  async createPublishableComponent(product: ExternalProduct, normalized: NormalizationResult) {
+    if (!normalized.categorySlug || !product.offers.some((offer) => offer.available)) return null;
+    const complete = specificationsSchema.safeParse(normalized.specifications);
+    const specifications = complete.success ? complete.data : createPublishableSpecifications(normalized, product.title);
+    if (!specifications) return null;
     const { data: category, error: categoryError } = await this.supabase.from("categories").select("id").eq("slug", normalized.categorySlug).single();
     dbError(categoryError, "Categoria normalizada não encontrada");
     const componentSlug = slug(`${normalized.brand ?? product.brand ?? "componente"}-${normalized.model ?? product.model ?? product.title}-${product.providerId}-${product.externalId}`);
-    const estimatedWatts = parsed.data.kind === "processor" ? parsed.data.tdpWatts : parsed.data.kind === "gpu" ? parsed.data.powerWatts : 0;
-    const payload = { category_id: category!.id, brand: (normalized.brand ?? product.brand ?? "Fabricante não informado").slice(0, 80), name: (normalized.model ?? product.model ?? product.title).slice(0, 120), slug: componentSlug, description: (product.description ?? `Componente importado da fonte ${product.providerId}.`).slice(0, 1200), image_url: product.imageUrl ?? `/products/${normalized.categorySlug}.svg`, specifications: parsed.data, estimated_watts: estimatedWatts, active: true, gtin: product.gtin ?? null, ean: product.ean ?? null, mpn: product.mpn ?? null, model_normalized: normalized.model, specification_status: "verified", specification_sources: [product.providerId] };
+    const estimatedWatts = specifications.kind === "processor" ? specifications.tdpWatts : specifications.kind === "gpu" ? specifications.powerWatts : 0;
+    const payload = { category_id: category!.id, brand: (normalized.brand ?? product.brand ?? "Fabricante não informado").slice(0, 80), name: product.title.slice(0, 120), slug: componentSlug, description: (product.description ?? "Produto real importado da API oficial do Mercado Livre. Confirme a ficha técnica no anúncio antes da compra.").slice(0, 1200), image_url: product.imageUrl ?? `/products/${normalized.categorySlug}.svg`, specifications, estimated_watts: estimatedWatts, active: true, gtin: product.gtin ?? null, ean: product.ean ?? null, mpn: product.mpn ?? null, model_normalized: normalized.model, specification_status: complete.success && normalized.status === "verified" ? "verified" : normalized.status === "unverified" ? "unverified" : "partial", specification_sources: [product.productUrl] };
     const { data, error } = await this.supabase.from("components").upsert(payload, { onConflict: "slug" }).select("id").single();
     dbError(error, "Falha ao criar componente verificado");
     return String(data!.id);

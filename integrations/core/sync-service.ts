@@ -10,7 +10,7 @@ export interface SyncRepository {
   beginJob(providerId: string, jobType: "catalog_sync" | "csv_import", metadata: Record<string, unknown>): Promise<string>;
   isProviderEnabled(providerId: string): Promise<boolean>;
   listComponents(): Promise<Component[]>;
-  createVerifiedComponent?(product: ExternalProduct, normalized: NormalizationResult): Promise<string | null>;
+  createPublishableComponent?(product: ExternalProduct, normalized: NormalizationResult): Promise<string | null>;
   saveExternalProduct(product: ExternalProduct, normalized: NormalizationResult, componentId: string | null, confidence: number | null, jobId: string): Promise<SavedExternalProduct>;
   saveMatchCandidates(externalProductId: string, candidates: MatchCandidate[]): Promise<void>;
   saveOffers(externalProductId: string, componentId: string | null, offers: ExternalProduct["offers"], jobId: string): Promise<void>;
@@ -45,8 +45,8 @@ export class SyncService {
         const best = candidates[0];
         let componentId = canAutoMatch(best) ? best.componentId : null;
         let confidence = best?.confidence ?? null;
-        if (!componentId && (!best || best.confidence < 0.75) && normalized.status === "verified") {
-          componentId = await this.repository.createVerifiedComponent?.(product, normalized) ?? null;
+        if (!componentId && (!best || best.confidence < 0.75) && normalized.categorySlug && product.offers.some((offer) => offer.available)) {
+          componentId = await this.repository.createPublishableComponent?.(product, normalized) ?? null;
           if (componentId) { confidence = 1; components.splice(0, components.length, ...await this.repository.listComponents()); }
         }
         const saved = await this.repository.saveExternalProduct(product, normalized, componentId, confidence, jobId);

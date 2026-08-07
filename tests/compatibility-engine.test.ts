@@ -80,6 +80,13 @@ describe("compatibility-engine", () => {
     expect(check(after, "cpu-motherboard-socket").status).toBe("incompatible");
   });
 
+  it("não inventa incompatibilidade para uma peça real com ficha parcial", () => {
+    const cpu = { ...byId("cpu-am5-6"), specificationStatus: "partial" as const, specifications: { ...byId("cpu-am5-6").specifications, socket: "Não informado" } };
+    const checks = evaluateBuild({ processador: cpu, "placa-mae": byId("mb-lga-ddr4-atx") });
+    expect(checks.some((item) => item.code === "cpu-motherboard-socket")).toBe(false);
+    expect(checks.some((item) => item.code === `unverified-specifications-${cpu.id}` && item.status === "warning")).toBe(true);
+  });
+
   it("ordena e escolhe a oferta mais barata como referência", () => {
     const cpu = byId("cpu-am5-6");
     const productOffers = getOffersForComponent(cpu.id);

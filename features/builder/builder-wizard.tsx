@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/utils";
 import type { CatalogData, Component } from "@/types/domain";
 
 function getFilterValue(item: Component) {
+  if (item.specificationStatus && item.specificationStatus !== "verified") return "Ficha técnica parcial";
   const specs = item.specifications;
   switch (specs.kind) {
     case "processor": return specs.socket;
