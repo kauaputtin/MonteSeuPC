@@ -72,6 +72,7 @@ export class SyncService {
     console.info(JSON.stringify({ event: "integration.sync.started", providerId: provider.id, jobId, queriesCount: queries.length, pages, pageSize }));
     const metrics: SyncMetrics = { itemsFound: 0, itemsCreated: 0, itemsUpdated: 0, itemsIgnored: 0, errorsCount: 0 };
     const seen = new Set<string>();
+    const failures: string[] = [];
     try {
       for (const query of queries) {
         for (let page = 0; page < pages; page++) {
@@ -81,13 +82,15 @@ export class SyncService {
             if (products.length < pageSize) break;
           } catch (error) {
             metrics.errorsCount++;
+            failures.push(`${query}: ${errorMessage(error)}`);
             console.error(JSON.stringify({ event: "integration.batch.failed", providerId: provider.id, jobId, query, page, error: errorMessage(error) }));
           }
         }
       }
       const status = metrics.errorsCount ? (metrics.itemsFound ? "partial" : "failed") : "completed";
       if (status !== "failed") await this.repository.invalidateProviderCache?.(provider.id);
-      await this.repository.finishJob(jobId, provider.id, metrics, status, status === "completed" ? undefined : "Uma ou mais etapas da sincronização falharam.");
+      const failureSummary = failures.length ? failures.slice(0, 3).join(" | ") : "Uma ou mais etapas da sincronização falharam.";
+      await this.repository.finishJob(jobId, provider.id, metrics, status, status === "completed" ? undefined : failureSummary);
       console.info(JSON.stringify({ event: "integration.sync.finished", providerId: provider.id, jobId, status, metrics }));
       return { jobId, status, metrics };
     } catch (error) {

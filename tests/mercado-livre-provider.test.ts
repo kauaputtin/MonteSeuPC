@@ -32,4 +32,17 @@ describe("MercadoLivreProvider", () => {
     const provider = new MercadoLivreProvider(async () => "token-de-teste-com-tamanho-valido");
     await expect(provider.getOffers({ externalProductId: "MLB-SEM-ANUNCIOS" })).resolves.toEqual([]);
   });
+
+  it("usa os dados da listagem quando detalhes de terceiros retornam 403", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: URL | RequestInfo) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/items") && url.pathname.startsWith("/products/")) return Promise.resolve(json({ paging: { total: 1, limit: 50, offset: 0 }, results: [{ item_id: "MLB4963626797", seller_id: 77, price: 449.9, original_price: null, currency_id: "BRL", condition: "new" }] }));
+      if (url.pathname === "/items") return Promise.resolve(json([{ code: 403, body: { id: "MLB4963626797", message: "Access to the requested resource is forbidden", error: "access_denied", status: 403 } }]));
+      throw new Error(`URL inesperada: ${url.pathname}`);
+    }));
+    const provider = new MercadoLivreProvider(async () => "token-de-teste-com-tamanho-valido");
+    await expect(provider.getOffers({ externalProductId: "MLB-CATALOG-1" })).resolves.toEqual([
+      expect.objectContaining({ externalId: "MLB4963626797", sellerExternalId: "77", price: 449.9, available: true, productUrl: "https://produto.mercadolivre.com.br/MLB-4963626797-_JM" })
+    ]);
+  });
 });

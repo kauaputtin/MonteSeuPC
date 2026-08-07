@@ -5,7 +5,7 @@ import { HttpStatusError } from "@/integrations/core/retry";
 import { safeFetchJson } from "@/integrations/core/safe-fetch";
 import { externalOfferSchema, externalProductSchema } from "@/integrations/schemas/external";
 import type { ExternalOffer, ExternalProduct, GetOffersInput, GetProductInput, ProviderCapabilities, ProviderHealth, SearchProductsInput } from "@/integrations/types/external";
-import { catalogOffersSchema, catalogProductSchema, catalogSearchSchema, itemMultigetSchema, type MercadoLivreCatalogProduct, type MercadoLivreItem } from "./schemas";
+import { catalogOffersSchema, catalogProductSchema, catalogSearchSchema, itemDetailSchema, itemMultigetSchema, type MercadoLivreCatalogOffer, type MercadoLivreCatalogProduct, type MercadoLivreItem } from "./schemas";
 
 const API_HOST = "api.mercadolibre.com";
 const API_ROOT = `https://${API_HOST}`;
@@ -36,6 +36,36 @@ function normalizeCondition(value?: string): ExternalOffer["condition"] {
 function numericIdentifier(value?: string) {
   const normalized = value?.replace(/\D/g, "") ?? "";
   return normalized.length >= 8 && normalized.length <= 14 ? normalized : undefined;
+}
+
+function itemFallbackUrl(itemId: string) {
+  const normalized = itemId.replace(/^MLB-?/i, "MLB-");
+  return `https://produto.mercadolivre.com.br/${encodeURIComponent(normalized)}-_JM`;
+}
+
+function catalogOfferToExternal(item: MercadoLivreCatalogOffer): ExternalOffer | null {
+  if (item.currency_id !== "BRL") return null;
+  return externalOfferSchema.parse({
+    providerId: "mercado-livre",
+    externalId: item.item_id,
+    sellerExternalId: item.seller_id === undefined ? undefined : String(item.seller_id),
+    price: item.price,
+    originalPrice: item.original_price ?? undefined,
+    currency: "BRL",
+    available: true,
+    condition: normalizeCondition(item.condition),
+    productUrl: itemFallbackUrl(item.item_id),
+    fetchedAt: new Date().toISOString()
+  });
+}
+
+function itemToExternal(item: MercadoLivreItem): ExternalOffer {
+  return externalOfferSchema.parse({
+    providerId: "mercado-livre", externalId: item.id, sellerExternalId: item.seller_id ? String(item.seller_id) : undefined,
+    price: item.price, originalPrice: item.original_price ?? undefined, currency: "BRL", available: item.status === "active" && (item.available_quantity ?? 1) > 0,
+    condition: normalizeCondition(item.condition), productUrl: item.permalink,
+    fetchedAt: item.last_updated && !Number.isNaN(Date.parse(item.last_updated)) ? new Date(item.last_updated).toISOString() : new Date().toISOString()
+  });
 }
 
 function catalogDomain(query: string) {
@@ -112,24 +142,34 @@ export class MercadoLivreProvider implements ProductProvider {
     }
     const listing = catalogOffersSchema.parse(raw);
     const itemIds = listing.results.map((item) => item.item_id).slice(0, limit);
-    const offers: ExternalOffer[] = [];
+    // A listagem do catálogo já traz preço e vendedor. Ela é o fallback
+    // quando o Mercado Livre bloqueia os detalhes de anúncios de terceiros.
+    const offersById = new Map<string, ExternalOffer>();
+    for (const item of listing.results.slice(0, limit)) {
+      const offer = catalogOfferToExternal(item);
+      if (offer) offersById.set(item.item_id, offer);
+    }
     for (let index = 0; index < itemIds.length; index += 20) {
       const ids = itemIds.slice(index, index + 20);
       const fields = "id,title,price,original_price,currency_id,available_quantity,status,condition,seller_id,permalink,thumbnail,catalog_product_id,category_id,domain_id,attributes,last_updated";
-      const detailsRaw = await this.request(`/items?ids=${ids.map(encodeURIComponent).join(",")}&attributes=${fields}`);
+      let detailsRaw: unknown;
+      try { detailsRaw = await this.request(`/items?ids=${ids.map(encodeURIComponent).join(",")}&attributes=${fields}`); }
+      catch (error) {
+        if (error instanceof HttpStatusError && error.status === 403) continue;
+        throw error;
+      }
       const details = itemMultigetSchema.parse(detailsRaw);
       for (const response of details) {
-        if (response.code !== 200 || !response.body || response.body.currency_id !== "BRL") continue;
-        const item = response.body;
-        const offer = externalOfferSchema.parse({
-          providerId: this.id, externalId: item.id, sellerExternalId: item.seller_id ? String(item.seller_id) : undefined,
-          price: item.price, originalPrice: item.original_price ?? undefined, currency: "BRL", available: item.status === "active" && (item.available_quantity ?? 1) > 0,
-          condition: normalizeCondition(item.condition), productUrl: item.permalink, fetchedAt: item.last_updated && !Number.isNaN(Date.parse(item.last_updated)) ? new Date(item.last_updated).toISOString() : new Date().toISOString()
-        });
-        offers.push(offer);
+        if (response.code !== 200) continue;
+        const parsed = itemDetailSchema.safeParse(response.body);
+        if (!parsed.success || parsed.data.currency_id !== "BRL") continue;
+        offersById.set(parsed.data.id, itemToExternal(parsed.data));
       }
     }
-    return offers;
+    return itemIds.flatMap((itemId) => {
+      const offer = offersById.get(itemId);
+      return offer ? [offer] : [];
+    });
   }
 
   private toProduct(product: MercadoLivreCatalogProduct, offers: ExternalOffer[]): ExternalProduct {

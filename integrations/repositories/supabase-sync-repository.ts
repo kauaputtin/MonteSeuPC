@@ -163,7 +163,7 @@ export class SupabaseSyncRepository implements SyncRepository {
     dbError(error, "Falha ao finalizar job");
     const { data: provider } = await this.supabase.from("integration_providers").select("sync_interval_minutes").eq("id", providerId).single();
     const providerUpdate = status === "failed"
-      ? { last_failure_at: now.toISOString(), last_error: errorMessage ?? "Falha na sincronização", configuration_status: "error" }
+      ? { last_failure_at: now.toISOString(), last_error: errorMessage ?? "Falha na sincronização" }
       : { last_success_at: now.toISOString(), last_error: status === "partial" ? errorMessage ?? "Sincronização parcial" : null, configuration_status: "configured", next_sync_at: new Date(now.getTime() + Number(provider?.sync_interval_minutes ?? 1440) * 60_000).toISOString() };
     const { error: providerError } = await this.supabase.from("integration_providers").update(providerUpdate).eq("id", providerId);
     dbError(providerError, "Falha ao atualizar estado da fonte");

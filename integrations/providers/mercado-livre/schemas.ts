@@ -26,12 +26,14 @@ export const catalogSearchSchema = z.object({
   results: z.array(catalogProductSchema)
 });
 
+const catalogOfferSchema = z.object({
+  item_id: z.string(), seller_id: z.union([z.string(), z.number()]).optional(), price: z.number().positive(),
+  original_price: z.number().positive().nullable().optional(), currency_id: z.string(), condition: z.string().optional()
+});
+
 export const catalogOffersSchema = z.object({
   paging: z.object({ total: z.number().int().nonnegative(), limit: z.number().int().nonnegative(), offset: z.number().int().nonnegative() }).optional(),
-  results: z.array(z.object({
-    item_id: z.string(), seller_id: z.union([z.string(), z.number()]).optional(), price: z.number().positive(),
-    original_price: z.number().positive().nullable().optional(), currency_id: z.string(), condition: z.string().optional()
-  }))
+  results: z.array(catalogOfferSchema)
 });
 
 export const itemDetailSchema = z.object({
@@ -42,7 +44,10 @@ export const itemDetailSchema = z.object({
   attributes: z.array(mercadoLivreAttributeSchema).default([]), last_updated: z.string().optional()
 });
 
-export const itemMultigetSchema = z.array(z.object({ code: z.number().int(), body: itemDetailSchema.optional() }));
+// O multiget devolve corpos de erro (por exemplo, 403) no mesmo array dos itens.
+// O corpo só pode ser validado como anúncio quando o código interno for 200.
+export const itemMultigetSchema = z.array(z.object({ code: z.number().int(), body: z.unknown().optional() }));
 
 export type MercadoLivreCatalogProduct = z.infer<typeof catalogProductSchema>;
+export type MercadoLivreCatalogOffer = z.infer<typeof catalogOfferSchema>;
 export type MercadoLivreItem = z.infer<typeof itemDetailSchema>;
