@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CircuitBreaker } from "@/integrations/core/circuit-breaker";
 import { assertSafeProviderUrl, safeFetchJson } from "@/integrations/core/safe-fetch";
 import { TokenBucketRateLimiter } from "@/integrations/core/rate-limiter";
 import { HttpStatusError, withRetry } from "@/integrations/core/retry";
@@ -17,6 +18,14 @@ describe("resiliência e segurança", () => {
     let calls = 0; const delays: number[] = [];
     const value = await withRetry(async () => { calls++; if (calls < 3) throw new HttpStatusError(429, "limit", 20); return "ok"; }, { attempts: 3, sleep: async (delay) => { delays.push(delay); }, random: () => 0.5 });
     expect(value).toBe("ok"); expect(calls).toBe(3); expect(delays).toEqual([20, 20]);
+  });
+
+  it("não abre o circuit breaker para respostas 4xx esperadas", async () => {
+    const breaker = new CircuitBreaker(2, 60_000, Date.now, (error) => !(error instanceof HttpStatusError) || error.status >= 500);
+    await expect(breaker.execute(async () => { throw new HttpStatusError(404, "sem anúncios"); })).rejects.toMatchObject({ status: 404 });
+    await expect(breaker.execute(async () => { throw new HttpStatusError(403, "detalhe bloqueado"); })).rejects.toMatchObject({ status: 403 });
+    expect(breaker.state).toBe("closed");
+    await expect(breaker.execute(async () => "ok")).resolves.toBe("ok");
   });
 
   it("bloqueia SSRF, IPs, credenciais e domínios fora da allowlist", () => {

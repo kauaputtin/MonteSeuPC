@@ -89,7 +89,9 @@ export class MercadoLivreProvider implements ProductProvider {
     technicalSpecifications: true, images: true, affiliateLinks: false
   };
   private readonly limiter = new TokenBucketRateLimiter({ capacity: 4, refillPerSecond: 2 });
-  private readonly breaker = new CircuitBreaker(4, 60_000);
+  private readonly breaker = new CircuitBreaker(4, 60_000, Date.now, (error) =>
+    !(error instanceof HttpStatusError) || error.status === 429 || error.status >= 500
+  );
 
   constructor(private readonly getAccessToken: () => Promise<string | null> = async () => process.env.MERCADO_LIVRE_ACCESS_TOKEN?.trim() || null) {}
 
