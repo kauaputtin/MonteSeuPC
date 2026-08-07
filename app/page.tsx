@@ -5,6 +5,8 @@ import {
   MemoryStick, MousePointerClick, PackageCheck, SearchCheck, ShieldCheck, ShoppingCart
 } from "lucide-react";
 import { categories, components, demoBuilds, getOffersForComponent } from "@/data/mock-data";
+import { MarketplaceProductCard } from "@/features/marketplace/marketplace-product-card";
+import { getMarketplaceProducts } from "@/lib/marketplace";
 import { formatCurrency } from "@/lib/utils";
 
 const benefits = [
@@ -19,7 +21,8 @@ const steps = [
   { number: "03", icon: PackageCheck, title: "Compare e finalize", text: "Escolha ofertas, confira potência e total, salve e compartilhe a montagem." }
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const marketplaceProducts = await getMarketplaceProducts();
   const heroItems = ["cpu-am5-6", "mb-am5-ddr5-atx", "ram-ddr5-32", "gpu-180"]
     .map((id) => components.find((item) => item.id === id))
     .filter((item) => item !== undefined);
@@ -44,7 +47,7 @@ export default function HomePage() {
             <p className="mt-6 max-w-2xl text-balance text-base leading-7 text-slate-300 sm:text-lg">Escolha cada peça com orientação de compatibilidade, compare ofertas e termine com uma lista clara de onde comprar.</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/montar" className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-cyan-300 bg-cyan-300 px-5 font-extrabold text-slate-950 transition-colors hover:bg-cyan-200">Montar meu PC <ArrowRight size={19} /></Link>
-              <Link href="#como-funciona" className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-900 px-5 font-bold text-slate-100 transition-colors hover:border-slate-400">Como funciona <ChevronRight size={18} /></Link>
+              <Link href="/produtos" className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-900 px-5 font-bold text-slate-100 transition-colors hover:border-slate-400">Ver produtos reais <ChevronRight size={18} /></Link>
             </div>
             <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-400">
               <span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-400" /> Sem cadastro</span>
@@ -101,6 +104,11 @@ export default function HomePage() {
             </ol>
           </div>
         </div>
+      </section>
+
+      <section id="produtos-reais" className="container-shell py-20 scroll-mt-20">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="heading-label">Dados conectados</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Produtos reais do Mercado Livre</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">Preços e ofertas trazidos pela integração oficial, separados dos produtos demonstrativos.</p></div><Link href="/produtos" className="inline-flex items-center gap-2 text-sm font-bold text-cyan-300 hover:text-cyan-200">Ver todos <ArrowRight size={17} /></Link></div>
+        {marketplaceProducts.length ? <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{marketplaceProducts.slice(0, 6).map((product) => <MarketplaceProductCard key={product.id} product={product} />)}</div> : <div className="surface mt-8 rounded-lg p-8 text-center text-sm text-slate-500">Os produtos reais aparecerão aqui após a sincronização do Mercado Livre.</div>}
       </section>
 
       <section id="exemplos" className="container-shell py-20 scroll-mt-20">
