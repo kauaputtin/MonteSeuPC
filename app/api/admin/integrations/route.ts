@@ -13,13 +13,18 @@ export async function GET() {
     context.supabase.from("csv_import_batches").select("*").order("created_at", { ascending: false }).limit(20)
   ]);
   if (providers.error || products.error || sources.error || jobs.error || batches.error) return NextResponse.json({ error: "A migration de integrações ainda não foi aplicada ou a consulta falhou." }, { status: 500 });
-  const items = (providers.data ?? []).map((provider) => ({
-    ...provider,
-    products_count: (products.data ?? []).filter((item) => item.provider_id === provider.id).length,
-    offers_count: (sources.data ?? []).filter((item) => item.provider_id === provider.id && item.offer_id).length,
-    errors_count: (jobs.data ?? []).filter((item) => item.provider_id === provider.id).reduce((sum, item) => sum + Number(item.errors_count), 0),
-    last_job: (jobs.data ?? []).find((item) => item.provider_id === provider.id) ?? null
-  }));
+  const items = (providers.data ?? []).map((provider) => {
+    const providerSources = (sources.data ?? []).filter((item) => item.provider_id === provider.id);
+    const lastJob = (jobs.data ?? []).find((item) => item.provider_id === provider.id) ?? null;
+    return {
+      ...provider,
+      products_count: (products.data ?? []).filter((item) => item.provider_id === provider.id).length,
+      offers_count: providerSources.length,
+      published_offers_count: providerSources.filter((item) => item.offer_id).length,
+      errors_count: Number(lastJob?.errors_count ?? 0),
+      last_job: lastJob
+    };
+  });
   return NextResponse.json({ items, jobs: jobs.data ?? [], batches: (batches.data ?? []).map((batch) => ({ ...batch, can_revert: !batch.reverted_at && Date.parse(batch.reversible_until) > Date.now() })) });
 }
 
