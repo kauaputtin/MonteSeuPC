@@ -1,4 +1,4 @@
--- Integrações externas, histórico e revisão de correspondências.
+-- Migration 001: integrações externas, histórico e revisão de correspondências.
 -- Esta migration é aditiva e preserva todo o catálogo existente.
 
 alter table public.components

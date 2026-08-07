@@ -33,9 +33,9 @@ npx supabase db reset
 
 Em um projeto hospedado, aplique na ordem:
 
-1. `supabase/migrations/202608070001_initial_schema.sql`;
-2. `supabase/migrations/202608070002_integrations.sql`;
-3. `supabase/seed.sql`, apenas se quiser o fallback demonstrativo.
+1. `supabase/migrations/000_initial_schema.sql`;
+2. `supabase/migrations/001_integrations.sql`;
+3. `supabase/migrations/002_seed.sql`, para carregar o fallback demonstrativo.
 
 A segunda migration é aditiva. Ela preserva o catálogo, identifica o seed fictício com `is_demo`, cria providers, produtos externos, origens de oferta, histórico de preço, jobs, candidatos, credenciais criptografadas, cache, lotes CSV, auditoria e eventos anônimos de saída. O trigger de preço só registra uma linha quando preço, Pix, preço original, frete ou disponibilidade muda.
 

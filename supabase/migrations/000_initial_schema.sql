@@ -1,3 +1,4 @@
+-- Migration 000: schema inicial.
 create extension if not exists pgcrypto;
 
 create table public.categories (

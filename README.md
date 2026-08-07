@@ -62,9 +62,9 @@ NEXT_PUBLIC_SITE_URL=https://seu-dominio.com.br
 ### Projeto hospedado
 
 1. Crie um projeto no Supabase.
-2. Abra o SQL Editor e execute `supabase/migrations/202608070001_initial_schema.sql`.
-3. Execute `supabase/migrations/202608070002_integrations.sql`.
-4. Execute `supabase/seed.sql` somente se quiser o fallback demonstrativo.
+2. Abra o SQL Editor e execute `supabase/migrations/000_initial_schema.sql`.
+3. Execute `supabase/migrations/001_integrations.sql`.
+4. Execute `supabase/migrations/002_seed.sql` para carregar o fallback demonstrativo.
 5. Copie a URL, a chave pública e a service role para `.env.local`.
 6. Em Authentication, crie o usuário administrador.
 7. No SQL Editor, associe o usuário ao perfil administrativo:
@@ -84,7 +84,7 @@ npx supabase start
 npx supabase db reset
 ```
 
-Como este repositório já contém `supabase/migrations` e `supabase/seed.sql`, `db reset` recria o banco e aplica ambos. Use os valores mostrados pelo CLI em `.env.local`. A referência atual da CLI está na [documentação oficial do Supabase](https://supabase.com/docs/guides/local-development/cli/getting-started).
+Como este repositório já contém as três migrations em `supabase/migrations`, `db reset` recria o banco e aplica todas em ordem. Use os valores mostrados pelo CLI em `.env.local`. A referência atual da CLI está na [documentação oficial do Supabase](https://supabase.com/docs/guides/local-development/cli/getting-started).
 
 ## Segurança e RLS
 
@@ -117,8 +117,7 @@ lib/
   supabase/                clientes server/browser e autenticação
   validations/             schemas Zod
 public/products/           ilustrações demonstrativas locais
-supabase/migrations/       schema PostgreSQL e RLS
-supabase/seed.sql          catálogo SQL fictício
+supabase/migrations/       schema, integrações, RLS e catálogo fictício
 tests/                     testes Vitest
 types/                     contratos TypeScript
 ```

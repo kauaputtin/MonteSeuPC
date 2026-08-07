@@ -1,4 +1,5 @@
--- Catálogo inteiramente fictício. Nenhum preço representa uma condição real ou atual.
+-- Migration 002: catálogo inteiramente fictício para desenvolvimento.
+-- Nenhum preço representa uma condição real ou atual.
 insert into public.categories (id, name, slug, sort_order) values
 ('cat-cpu','Processador','processador',1),('cat-mb','Placa-mãe','placa-mae',2),('cat-ram','Memória RAM','memoria-ram',3),('cat-gpu','Placa de vídeo','placa-de-video',4),
 ('cat-storage','Armazenamento','armazenamento',5),('cat-psu','Fonte','fonte',6),('cat-case','Gabinete','gabinete',7),('cat-cooler','Cooler','cooler',8)
