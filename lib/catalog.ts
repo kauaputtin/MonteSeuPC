@@ -1,5 +1,6 @@
 import "server-only";
 
+import { connection } from "next/server";
 import { categories as demoCategories, components as demoComponents, offers as demoOffers, stores as demoStores } from "@/data/mock-data";
 import { specificationsSchema } from "@/lib/validations/schemas";
 import { createPublicSupabaseClient } from "@/lib/supabase/server";
@@ -22,6 +23,9 @@ function safeImageUrl(value: unknown, category: CategorySlug) {
 }
 
 export async function getCatalogData(): Promise<CatalogData> {
+  // O catálogo muda por sincronizações executadas depois do deploy. Sem este
+  // marcador o Next pode congelar o resultado do Supabase durante o build.
+  await connection();
   const supabase = createPublicSupabaseClient();
   if (!supabase) return fallback;
 

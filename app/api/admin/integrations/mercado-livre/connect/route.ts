@@ -2,11 +2,20 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/supabase/auth";
 
+const CALLBACK_PATH = "/api/integrations/mercado-livre/callback";
+
 export async function GET() {
   if (!await verifyAdminRequest()) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   const clientId = process.env.MERCADO_LIVRE_CLIENT_ID?.trim();
   const redirectUri = process.env.MERCADO_LIVRE_REDIRECT_URI?.trim();
   if (!clientId || !redirectUri) return NextResponse.json({ error: "Configure o client ID e a redirect URI do Mercado Livre." }, { status: 503 });
+  let callback: URL;
+  try { callback = new URL(redirectUri); }
+  catch { return NextResponse.json({ error: "MERCADO_LIVRE_REDIRECT_URI não é uma URL válida." }, { status: 503 }); }
+  if (!["http:", "https:"].includes(callback.protocol) || callback.pathname !== CALLBACK_PATH || callback.search || callback.hash) {
+    const expected = new URL(CALLBACK_PATH, callback.origin).toString();
+    return NextResponse.json({ error: `MERCADO_LIVRE_REDIRECT_URI deve ser exatamente ${expected} e ter o mesmo valor cadastrado no aplicativo do Mercado Livre.` }, { status: 503 });
+  }
   const state = randomBytes(32).toString("base64url");
   const authorization = new URL("https://auth.mercadolivre.com.br/authorization");
   authorization.searchParams.set("response_type", "code"); authorization.searchParams.set("client_id", clientId);
