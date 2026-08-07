@@ -9,12 +9,11 @@ const tokenSchema = z.object({ access_token: z.string().min(10), token_type: z.s
 type TokenResponse = z.infer<typeof tokenSchema>;
 interface StoredCredential { accessToken: string; refreshToken?: string; expiresAt: string; }
 
-function appConfiguration() {
+function appCredentials() {
   const clientId = process.env.MERCADO_LIVRE_CLIENT_ID?.trim();
   const clientSecret = process.env.MERCADO_LIVRE_CLIENT_SECRET?.trim();
-  const redirectUri = process.env.MERCADO_LIVRE_REDIRECT_URI?.trim();
-  if (!clientId || !clientSecret || !redirectUri) throw new Error("Configure MERCADO_LIVRE_CLIENT_ID, MERCADO_LIVRE_CLIENT_SECRET e MERCADO_LIVRE_REDIRECT_URI.");
-  return { clientId, clientSecret, redirectUri };
+  if (!clientId || !clientSecret) throw new Error("Configure MERCADO_LIVRE_CLIENT_ID e MERCADO_LIVRE_CLIENT_SECRET.");
+  return { clientId, clientSecret };
 }
 
 async function requestToken(parameters: Record<string, string>) {
@@ -35,9 +34,11 @@ export async function saveMercadoLivreCredentials(token: TokenResponse) {
   await supabase.from("integration_providers").update({ enabled: true, configuration_status: "configured", last_error: null }).eq("id", "mercado-livre");
 }
 
-export async function exchangeMercadoLivreCode(code: string) {
-  const app = appConfiguration();
-  const token = await requestToken({ grant_type: "authorization_code", client_id: app.clientId, client_secret: app.clientSecret, code, redirect_uri: app.redirectUri });
+export async function exchangeMercadoLivreCode(code: string, callbackUri?: string) {
+  const app = appCredentials();
+  const redirectUri = process.env.MERCADO_LIVRE_REDIRECT_URI?.trim() || callbackUri?.trim();
+  if (!redirectUri) throw new Error("Não foi possível determinar a redirect URI do Mercado Livre.");
+  const token = await requestToken({ grant_type: "authorization_code", client_id: app.clientId, client_secret: app.clientSecret, code, redirect_uri: redirectUri });
   await saveMercadoLivreCredentials(token);
 }
 
@@ -51,7 +52,7 @@ export async function loadMercadoLivreAccessToken() {
   const stored = decryptIntegrationPayload<StoredCredential>(String(data.encrypted_payload));
   if (Date.parse(stored.expiresAt) > Date.now() + 120_000) return stored.accessToken;
   if (!stored.refreshToken) return null;
-  const app = appConfiguration();
+  const app = appCredentials();
   const refreshed = await requestToken({ grant_type: "refresh_token", client_id: app.clientId, client_secret: app.clientSecret, refresh_token: stored.refreshToken });
   if (!refreshed.refresh_token) refreshed.refresh_token = stored.refreshToken;
   await saveMercadoLivreCredentials(refreshed);

@@ -4,15 +4,11 @@ import { verifyAdminRequest } from "@/lib/supabase/auth";
 
 const CALLBACK_PATH = "/api/integrations/mercado-livre/callback";
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!await verifyAdminRequest()) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   const clientId = process.env.MERCADO_LIVRE_CLIENT_ID?.trim();
-  const redirectUri = process.env.MERCADO_LIVRE_REDIRECT_URI?.trim();
-  const missingVariables = [
-    !clientId ? "MERCADO_LIVRE_CLIENT_ID" : null,
-    !redirectUri ? "MERCADO_LIVRE_REDIRECT_URI" : null
-  ].filter((name): name is string => Boolean(name));
-  if (!clientId || !redirectUri) return NextResponse.json({ error: `Variáveis ausentes neste deployment: ${missingVariables.join(", ")}.` }, { status: 503 });
+  if (!clientId) return NextResponse.json({ error: "Variável ausente neste deployment: MERCADO_LIVRE_CLIENT_ID." }, { status: 503 });
+  const redirectUri = process.env.MERCADO_LIVRE_REDIRECT_URI?.trim() || new URL(CALLBACK_PATH, request.url).toString();
   let callback: URL;
   try { callback = new URL(redirectUri); }
   catch { return NextResponse.json({ error: "MERCADO_LIVRE_REDIRECT_URI não é uma URL válida." }, { status: 503 }); }

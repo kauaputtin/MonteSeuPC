@@ -19,7 +19,8 @@ export async function GET(request: Request) {
     target.searchParams.set("oauth", "invalid"); return NextResponse.redirect(target);
   }
   try {
-    await exchangeMercadoLivreCode(code);
+    const redirectUri = new URL(url.pathname, url.origin).toString();
+    await exchangeMercadoLivreCode(code, redirectUri);
     await createAdminSupabaseClient()?.from("admin_audit_log").insert({ user_id: access.user.id, action: "integration.oauth.connect", resource_type: "integration_provider", resource_id: "mercado-livre", metadata: {} });
     target.searchParams.set("oauth", "success");
   }
