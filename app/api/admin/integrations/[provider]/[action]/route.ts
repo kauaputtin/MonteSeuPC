@@ -3,6 +3,7 @@ import { z } from "zod";
 import { SyncService } from "@/integrations/core/sync-service";
 import { SupabaseSyncRepository } from "@/integrations/repositories/supabase-sync-repository";
 import { getProviderRegistry } from "@/integrations/registry";
+import { mercadoLivreSyncQueries } from "@/integrations/providers/mercado-livre/sync-queries";
 import { auditAdminAction, consumeAdminRateLimit, getAdminApiContext } from "@/lib/admin-api";
 
 const bodySchema = z.object({ queries: z.array(z.string().trim().min(2).max(100)).min(1).max(25).optional(), pages: z.number().int().min(1).max(10).optional(), pageSize: z.number().int().min(1).max(20).optional() });
@@ -25,8 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     }
     if (action === "sync") {
       const body = bodySchema.parse(await request.json().catch(() => ({})));
-      const defaultQueries = (process.env.MERCADO_LIVRE_SYNC_QUERIES ?? "Ryzen 5 5600G,placa mãe B550M,memória DDR4 16GB,RX 6600,SSD NVMe 1TB,fonte 650W,gabinete ATX,cooler AM4").split(",").map((item) => item.trim()).filter(Boolean);
-      const result = await new SyncService(new SupabaseSyncRepository(context.supabase)).syncProvider(provider, { queries: body.queries ?? defaultQueries, pages: body.pages, pageSize: body.pageSize });
+      const result = await new SyncService(new SupabaseSyncRepository(context.supabase)).syncProvider(provider, { queries: body.queries ?? mercadoLivreSyncQueries(), pages: body.pages, pageSize: body.pageSize });
       await auditAdminAction(context, "integration.sync", "integration_provider", providerId, { jobId: result.jobId, status: result.status });
       return NextResponse.json(result);
     }

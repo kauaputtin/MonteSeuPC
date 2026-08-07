@@ -44,6 +44,10 @@ describe("normalização externa", () => {
     expect(specificationsSchema.safeParse(publishable).success).toBe(true);
     expect(normalized.status).toBe("partial");
   });
+
+  it("prioriza o domínio oficial quando o título do processador menciona cooler", () => {
+    expect(normalizeExternalProduct({ ...product, category: "MLB-COMPUTER_PROCESSORS", title: "Processador Intel com cooler" }).categorySlug).toBe("processador");
+  });
 });
 
 describe("correspondência de produtos", () => {

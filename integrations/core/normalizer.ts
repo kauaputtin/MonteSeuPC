@@ -70,6 +70,15 @@ function bool(value: unknown) {
 }
 
 export function detectCategory(product: Pick<ExternalProduct, "category" | "title">): CategorySlug | null {
+  const declared = normalizeComparableText(product.category ?? "");
+  if (/computer processors/.test(declared)) return "processador";
+  if (/computer motherboards/.test(declared)) return "placa-mae";
+  if (/ram memory modules/.test(declared)) return "memoria-ram";
+  if (/graphics cards/.test(declared)) return "placa-de-video";
+  if (/hard drives and ssds/.test(declared)) return "armazenamento";
+  if (/computer power supplies/.test(declared)) return "fonte";
+  if (/computer cases/.test(declared)) return "gabinete";
+  if (/computer coolers and fans/.test(declared)) return "cooler";
   const value = normalizeComparableText(`${product.category ?? ""} ${product.title}`);
   if (/motherboard|placa mae/.test(value)) return "placa-mae";
   if (/cpu cooler|computer cooler|water cooler|air cooler|cooler/.test(value)) return "cooler";
