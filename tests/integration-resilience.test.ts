@@ -14,6 +14,19 @@ describe("resiliência e segurança", () => {
     now = 1_000; expect(limiter.tryAcquire()).toBe(true);
   });
 
+  it("aguarda o token ficar disponível sem perder a reserva por arredondamento", async () => {
+    vi.useFakeTimers();
+    try {
+      const limiter = new TokenBucketRateLimiter({ capacity: 1, refillPerSecond: 2 });
+      expect(limiter.tryAcquire()).toBe(true);
+      const reservation = limiter.acquire(1, 1_000);
+      await vi.advanceTimersByTimeAsync(500);
+      await expect(reservation).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refaz 429 com exponential backoff e respeita retry-after", async () => {
     let calls = 0; const delays: number[] = [];
     const value = await withRetry(async () => { calls++; if (calls < 3) throw new HttpStatusError(429, "limit", 20); return "ok"; }, { attempts: 3, sleep: async (delay) => { delays.push(delay); }, random: () => 0.5 });

@@ -33,9 +33,15 @@ export class TokenBucketRateLimiter {
   }
 
   async acquire(cost = 1, maxWaitMs = 10_000) {
-    const wait = this.millisecondsUntilAvailable(cost);
-    if (wait > maxWaitMs) throw new Error("Limite de requisições do provider atingido.");
-    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-    if (!this.tryAcquire(cost)) throw new Error("Não foi possível reservar capacidade no provider.");
+    if (cost <= 0 || cost > this.options.capacity) throw new Error("Custo de requisição inválido para o provider.");
+    let remainingWaitMs = maxWaitMs;
+    while (!this.tryAcquire(cost)) {
+      // O timer pode acordar uma fração de milissegundo antes de o token estar
+      // completo. Nesse caso, aguarda o restante em vez de falhar a categoria.
+      const wait = Math.max(1, this.millisecondsUntilAvailable(cost));
+      if (wait > remainingWaitMs) throw new Error("Limite de requisições do provider atingido.");
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      remainingWaitMs -= wait;
+    }
   }
 }
