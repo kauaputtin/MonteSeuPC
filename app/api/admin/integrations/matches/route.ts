@@ -4,7 +4,8 @@ import { normalizeExternalProduct } from "@/integrations/core/normalizer";
 import { rankProductMatches } from "@/integrations/core/product-matcher";
 import { externalProductSchema } from "@/integrations/schemas/external";
 import { SupabaseSyncRepository } from "@/integrations/repositories/supabase-sync-repository";
-import { auditAdminAction, getAdminApiContext } from "@/lib/admin-api";
+import { auditAdminAction, getAdminApiContext, safeErrorMessage } from "@/lib/admin-api";
+import { invalidateCatalog } from "@/lib/catalog";
 
 export async function GET() {
   const context = await getAdminApiContext();
@@ -43,6 +44,7 @@ export async function PATCH(request: Request) {
         await context.supabase.from("external_products").update({ normalized_specifications: normalized.specifications, verification_status: normalized.status, match_confidence: candidates[0]?.confidence ?? null, match_status: "pending" }).eq("id", product.id);
       }
       await auditAdminAction(context, `match.${action}`, "external_product", String(product.id));
+      invalidateCatalog();
       return NextResponse.json({ ok: true });
     }
     if (!parsed.data.candidateId) throw new Error("Candidato obrigatório.");
@@ -64,7 +66,8 @@ export async function PATCH(request: Request) {
         if (offerId) await context.supabase.from("offer_sources").update({ offer_id: offerId }).eq("id", source.id);
       }
     }
+    invalidateCatalog();
     await auditAdminAction(context, `match.${action}`, "product_match_candidate", String(candidate.id), { externalProductId: candidate.external_product_id, componentId: candidate.component_id });
     return NextResponse.json({ ok: true });
-  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Falha ao revisar associação." }, { status: 400 }); }
+  } catch (error) { return NextResponse.json({ error: safeErrorMessage(error, "Falha ao revisar associação.") }, { status: 400 }); }
 }

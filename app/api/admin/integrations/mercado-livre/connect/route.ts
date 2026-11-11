@@ -21,6 +21,6 @@ export async function GET(request: Request) {
   authorization.searchParams.set("response_type", "code"); authorization.searchParams.set("client_id", clientId);
   authorization.searchParams.set("redirect_uri", redirectUri); authorization.searchParams.set("state", state);
   const response = NextResponse.redirect(authorization);
-  response.cookies.set("ml_oauth_state", state, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 600 });
+  response.cookies.set("ml_oauth_state", state, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/api/integrations/mercado-livre", maxAge: 600 });
   return response;
 }

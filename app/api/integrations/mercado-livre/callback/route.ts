@@ -25,5 +25,5 @@ export async function GET(request: Request) {
     target.searchParams.set("oauth", "success");
   }
   catch { target.searchParams.set("oauth", "error"); }
-  const response = NextResponse.redirect(target); response.cookies.delete("ml_oauth_state"); return response;
+  const response = NextResponse.redirect(target); response.cookies.set("ml_oauth_state", "", { path: "/api/integrations/mercado-livre", maxAge: 0 }); return response;
 }

@@ -15,11 +15,16 @@ export interface SyncRepository {
   saveMatchCandidates(externalProductId: string, candidates: MatchCandidate[]): Promise<void>;
   saveOffers(externalProductId: string, componentId: string | null, offers: ExternalProduct["offers"], jobId: string): Promise<void>;
   invalidateProviderCache?(providerId: string): Promise<void>;
-  finishJob(jobId: string, providerId: string, metrics: SyncMetrics, status: "completed" | "partial" | "failed", errorMessage?: string): Promise<void>;
+  finishJob(jobId: string, providerId: string, metrics: SyncMetrics, status: "completed" | "partial" | "failed", errorMessage?: string, metadata?: Record<string, unknown>): Promise<void>;
+  /** Posição do próximo lote de um feed (0 quando não há histórico). */
+  getFeedCursor?(providerId: string): Promise<number>;
 }
 
 export interface ProviderSyncInput {
-  queries: string[];
+  /** Obrigatório para providers de busca; ignorado em providers de feed. */
+  queries?: string[];
+  /** Itens por execução em providers de feed. */
+  batchSize?: number;
   pages?: number;
   pageSize?: number;
 }
@@ -60,11 +65,37 @@ export class SyncService {
     }
   }
 
-  async syncProvider(provider: ProductProvider, input: ProviderSyncInput) {
+  private async syncFeed(provider: ProductProvider & Required<Pick<ProductProvider, "listCatalog">>, input: ProviderSyncInput) {
+    const limit = Math.max(1, Math.min(input.batchSize ?? 250, 1_000));
+    const offset = await this.repository.getFeedCursor?.(provider.id) ?? 0;
+    const metadata: Record<string, unknown> = { mode: "feed", offset, limit };
+    const jobId = await this.repository.beginJob(provider.id, "catalog_sync", metadata);
+    console.info(JSON.stringify({ event: "integration.feed.started", providerId: provider.id, jobId, offset, limit }));
+    const metrics: SyncMetrics = { itemsFound: 0, itemsCreated: 0, itemsUpdated: 0, itemsIgnored: 0, errorsCount: 0 };
+    try {
+      let page = await provider.listCatalog({ offset, limit });
+      // Feed encolheu desde o último lote: recomeça do início.
+      if (!page.products.length && offset > 0) { metadata.offset = 0; page = await provider.listCatalog({ offset: 0, limit }); }
+      await this.processProducts(provider.id, page.products, jobId, metrics);
+      const status = metrics.errorsCount ? (metrics.itemsFound ? "partial" : "failed") : "completed";
+      if (status !== "failed") await this.repository.invalidateProviderCache?.(provider.id);
+      const finalMetadata = { ...metadata, total: page.total, nextOffset: page.nextOffset ?? 0 };
+      await this.repository.finishJob(jobId, provider.id, metrics, status, status === "completed" ? undefined : "Alguns itens do feed falharam na importação.", finalMetadata);
+      console.info(JSON.stringify({ event: "integration.feed.finished", providerId: provider.id, jobId, status, metrics, nextOffset: finalMetadata.nextOffset, total: page.total }));
+      return { jobId, status, metrics };
+    } catch (error) {
+      metrics.errorsCount++;
+      await this.repository.finishJob(jobId, provider.id, metrics, "failed", errorMessage(error), metadata);
+      throw error;
+    }
+  }
+
+  async syncProvider(provider: ProductProvider, input: ProviderSyncInput = {}) {
     if (!await this.repository.isProviderEnabled(provider.id)) throw new Error(`A fonte ${provider.name} está desativada.`);
     if (!await provider.isConfigured()) throw new Error(`A fonte ${provider.name} não possui credenciais válidas.`);
+    if (provider.listCatalog && !input.queries?.length) return this.syncFeed(provider as ProductProvider & Required<Pick<ProductProvider, "listCatalog">>, input);
     if (!provider.capabilities.productSearch || !provider.searchProducts) throw new Error(`A fonte ${provider.name} não oferece busca de produtos.`);
-    const queries = [...new Set(input.queries.map((query) => query.trim()).filter(Boolean))].slice(0, 25);
+    const queries = [...new Set((input.queries ?? provider.defaultSyncQueries?.() ?? []).map((query) => query.trim()).filter(Boolean))].slice(0, 25);
     if (!queries.length) throw new Error("Informe ao menos um termo de busca.");
     const pages = Math.max(1, Math.min(input.pages ?? 1, 10));
     const pageSize = Math.max(1, Math.min(input.pageSize ?? 10, 20));

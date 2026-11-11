@@ -3,6 +3,7 @@ import { z } from "zod";
 import { verifyAdminRequest } from "@/lib/supabase/auth";
 import { createAuthenticatedSupabaseClient } from "@/lib/supabase/auth";
 import { specificationsSchema } from "@/lib/validations/schemas";
+import { invalidateCatalog } from "@/lib/catalog";
 
 type Resource = "componentes" | "lojas" | "ofertas";
 const tableMap: Record<Resource, "components" | "stores" | "offers"> = { componentes: "components", lojas: "stores", ofertas: "offers" };
@@ -65,6 +66,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ res
     const { data, error } = await ctx.supabase.from(tableMap[ctx.resource]).insert(payload as never).select("*").single();
     if (error) throw error;
     await audit(ctx.supabase, "resource.create", ctx.resource, String(data.id));
+    invalidateCatalog();
     return NextResponse.json({ item: data }, { status: 201 });
   } catch { return NextResponse.json({ error: "Dados inválidos ou registro duplicado." }, { status: 400 }); }
 }
@@ -83,6 +85,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
     const { data, error } = await ctx.supabase.from(tableMap[ctx.resource]).update(payload as never).eq("id", id).select("*").single();
     if (error) throw error;
     await audit(ctx.supabase, "resource.update", ctx.resource, id);
+    invalidateCatalog();
     return NextResponse.json({ item: data });
   } catch { return NextResponse.json({ error: "Dados inválidos." }, { status: 400 }); }
 }
@@ -96,5 +99,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ r
   const { error } = await ctx.supabase.from(tableMap[ctx.resource]).update({ [field]: false }).eq("id", id);
   if (error) return NextResponse.json({ error: "Não foi possível desativar." }, { status: 500 });
   await audit(ctx.supabase, "resource.deactivate", ctx.resource, id);
+  invalidateCatalog();
   return NextResponse.json({ ok: true });
 }

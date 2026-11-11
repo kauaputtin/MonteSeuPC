@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auditAdminAction, getAdminApiContext } from "@/lib/admin-api";
+import { invalidateCatalog } from "@/lib/catalog";
 
 const schema = z.object({ batchId: z.string().min(1) });
 
@@ -21,5 +22,6 @@ export async function POST(request: Request) {
   if (products?.length) await context.supabase.from("external_products").delete().in("id", products.map((product) => product.id));
   await context.supabase.from("csv_import_batches").update({ reverted_at: new Date().toISOString() }).eq("id", batch.id);
   await auditAdminAction(context, "csv.undo", "csv_import_batch", String(batch.id), { removedOffers: offerIds.length, removedProducts: products?.length ?? 0, partial: true });
+  invalidateCatalog();
   return NextResponse.json({ ok: true, removedOffers: offerIds.length, removedProducts: products?.length ?? 0, message: "Registros criados pelo lote foram removidos. Atualizações sobre registros anteriores não são revertidas." });
 }

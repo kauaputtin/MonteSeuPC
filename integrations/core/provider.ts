@@ -17,7 +17,13 @@ export interface ProductProvider {
   getProduct?(input: GetProductInput): Promise<ExternalProduct | null>;
   getOffers?(input: GetOffersInput): Promise<ExternalOffer[]>;
   healthCheck(): Promise<ProviderHealth>;
+  /** Termos usados pela sincronização agendada quando o provider trabalha por busca. */
+  defaultSyncQueries?(): string[];
+  /** Providers de feed entregam o catálogo inteiro, lido em lotes a partir de um cursor. */
+  listCatalog?(input: { offset: number; limit: number }): Promise<CatalogPage>;
 }
+
+export interface CatalogPage { products: ExternalProduct[]; total: number; nextOffset: number | null; }
 
 export abstract class DisabledProvider implements ProductProvider {
   abstract readonly id: string;

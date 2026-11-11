@@ -1,6 +1,8 @@
 import { isIP } from "node:net";
 import { HttpStatusError, withRetry } from "./retry";
 
+const USER_AGENT = "MonteSeuPC/1.0";
+
 export interface SafeFetchOptions {
   allowedHosts: string[];
   timeoutMs?: number;
@@ -39,6 +41,26 @@ async function readLimited(response: Response, maximumBytes: number) {
   return merged;
 }
 
+/** Download binário (feeds CSV/gzip) com as mesmas travas de host, timeout e tamanho. */
+export async function safeFetchBytes(value: string, options: SafeFetchOptions): Promise<Uint8Array> {
+  const url = assertSafeProviderUrl(value, options.allowedHosts);
+  return withRetry(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 60_000);
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "text/csv, application/gzip, application/octet-stream, */*", "User-Agent": USER_AGENT, ...options.headers },
+        signal: controller.signal,
+        redirect: "error",
+        cache: "no-store"
+      });
+      if (!response.ok) throw new HttpStatusError(response.status, `Feed respondeu HTTP ${response.status}.`);
+      return await readLimited(response, options.maxResponseBytes ?? 40_000_000);
+    } finally { clearTimeout(timeout); }
+  }, { attempts: options.attempts ?? 2 });
+}
+
 export async function safeFetchJson(value: string, options: SafeFetchOptions): Promise<unknown> {
   const url = assertSafeProviderUrl(value, options.allowedHosts);
   return withRetry(async () => {
@@ -47,7 +69,7 @@ export async function safeFetchJson(value: string, options: SafeFetchOptions): P
     try {
       const response = await fetch(url, {
         method: options.method ?? "GET",
-        headers: { Accept: "application/json", "User-Agent": "MonteSeuPC/1.0 (+https://github.com/kauaputtin/MonteSeuPC)", ...options.headers },
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT, ...options.headers },
         body: options.body,
         signal: controller.signal,
         redirect: "error",

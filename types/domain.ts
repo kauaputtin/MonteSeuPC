@@ -183,6 +183,10 @@ export interface CatalogData {
   stores: Store[];
   offers: Offer[];
   source: "supabase" | "demo";
+  /** Quando este snapshot do catálogo foi montado no servidor. */
+  generatedAt?: string;
+  /** Verificação de preço mais recente entre as ofertas do snapshot. */
+  pricesCheckedAt?: string;
 }
 
 export interface CompatibilityResult {

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { Buffer } from "node:buffer";
 import { categories, components, offers } from "@/data/mock-data";
 import { calculateBuildTotal } from "@/lib/calculations";
@@ -85,7 +87,9 @@ interface DbBuildItem {
 
 export async function getPublicBuild(publicId: string, catalog?: CatalogData): Promise<PublicBuild | null> {
   const activeCatalog = catalog ?? await getCatalogData();
-  const supabase = createPublicSupabaseClient();
+  // Leitura pelo servidor: com a migration 003 o papel anônimo não lista mais montagens.
+  if (!/^[a-f0-9]{20}$/.test(publicId)) return null;
+  const supabase = createAdminSupabaseClient() ?? createPublicSupabaseClient();
   if (!supabase) return null;
   const { data: build, error } = await supabase.from("builds").select("id, public_id, name, created_at").eq("public_id", publicId).single();
   if (error || !build) return null;
